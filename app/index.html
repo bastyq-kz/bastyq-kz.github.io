@@ -120,11 +120,16 @@
 <script>
 (function () {
   var tg = window.Telegram && window.Telegram.WebApp;
+  // Скрипт телеграма грузится и в обычном браузере, и там colorScheme всегда
+  // «light». Поймано живьём 25.08.2026: страница, открытая ссылкой в тёмной
+  // системе, прибивалась к светлой теме. Настоящий телеграм отличаем по platform.
+  var вТелеграме = !!(tg && tg.platform && tg.platform !== "unknown");
   if (tg) {
     tg.ready(); tg.expand();
-    if (tg.colorScheme) document.documentElement.setAttribute("data-theme", tg.colorScheme);
-    // Фон под тему телеграма, иначе по краям видна чужая подложка.
-    try { tg.setBackgroundColor(tg.colorScheme === "dark" ? "#0F1413" : "#F6F8F7"); } catch (e) {}
+    if (вТелеграме) {
+      document.documentElement.setAttribute("data-theme", tg.colorScheme || "light");
+      try { tg.setBackgroundColor(tg.colorScheme === "dark" ? "#0F1413" : "#F6F8F7"); } catch (e) {}
+    }
   }
 
   // Генератор ровно тот же, что в demo.py: недельный ритм, медленный рост,
@@ -214,7 +219,7 @@
     b.addEventListener("click", function () {
       кнопки.forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); });
       нарисовать(b.dataset.p);
-      if (tg && tg.HapticFeedback) { try { tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+      if (вТелеграме && tg.HapticFeedback) { try { tg.HapticFeedback.selectionChanged(); } catch (e) {} }
     });
   });
   нарисовать("день");
@@ -222,7 +227,7 @@
   // Из мини-аппа ссылка на бота открывается неправильно: получается окно внутри
   // окна. Поэтому просим телеграм открыть чат сам и закрываемся.
   document.getElementById("кнопка").addEventListener("click", function (e) {
-    if (tg && tg.openTelegramLink) {
+    if (вТелеграме && tg.openTelegramLink) {
       e.preventDefault();
       tg.openTelegramLink("https://t.me/bastyq_bot?start=app");
       tg.close();
