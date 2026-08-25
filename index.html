@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Бастық - управляющий, который читает вашу кассу</title>
+<style>
+  :root{
+    --paper:#F7F6F5; --card:#FFFFFF; --ink:#1B1A20; --ink-soft:#5E5A63; --ink-faint:#938E97; --line:#E7E3E5;
+    --accent:#146B54; --accent-deep:#0E5240; --accent-tint:#E7F0EB;
+    --rose:#B03A63; --rose-tint:#F7E7ED;
+    --signal:#B4611F; --signal-tint:#F6EADD;
+    --radius:14px;
+    --mono:'SFMono-Regular','SF Mono','Cascadia Code',ui-monospace,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  .page{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;padding:clamp(20px,5vw,64px) clamp(18px,5vw,40px) 72px}
+  .wrap{max-width:1000px;margin:0 auto}
+  .prose{max-width:64ch}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px;font-weight:600}
+  .wordmark{font-family:var(--sans);font-size:16px;letter-spacing:-.015em;text-transform:none;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:9px;margin:0 0 10px}
+  .wordmark svg{display:block;flex:none}
+  h1{font-size:clamp(28px,5vw,46px);line-height:1.08;letter-spacing:-.02em;font-weight:800;margin:0 0 18px;text-wrap:balance}
+  h1 .rose{color:var(--rose)}
+  .lede{font-size:clamp(18px,2.4vw,21px);color:var(--ink-soft);margin:0 0 20px;max-width:60ch;text-wrap:pretty}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+  .chips li{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);padding:6px 11px;border-radius:999px}
+
+  .masthead{border-bottom:2px solid var(--ink);padding-bottom:34px;margin-bottom:14px}
+  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:start}
+  @media (max-width:760px){.hero-grid{grid-template-columns:1fr;gap:24px}}
+
+  .msg{background:var(--ink);color:#ECEAF0;border-radius:var(--radius);padding:18px 20px;font-size:14.5px;line-height:1.7;box-shadow:0 18px 40px -26px rgba(20,10,20,.55)}
+  .msg .top{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:#8FB8AB;margin-bottom:10px;display:flex;justify-content:space-between}
+  .msg .top .t{color:#6C6775}
+  .msg b{color:#fff;font-weight:700}
+  .msg .k{color:#9A94A2}
+  .msg .up{color:#74CFA0}
+  .msg .warn{color:#E4A268}
+  .msg .q{color:#C6C0CC;font-style:italic}
+  .msg .line{display:block}
+  .msg .hr{height:1px;background:#312E38;margin:9px 0}
+
+  .demo-cap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 8px}
+  .intro{max-width:66ch;color:var(--ink-soft);margin:28px 0 0;font-size:17px}
+
+  .band{margin-top:60px}
+  .band>.bhead{display:flex;align-items:baseline;gap:14px;padding-bottom:14px;margin-bottom:24px;border-bottom:1px solid var(--line)}
+  .band .bnum{font-family:var(--mono);font-size:13px;color:var(--ink-faint);letter-spacing:.1em}
+  .band h2{font-size:clamp(22px,3.2vw,30px);letter-spacing:-.01em;font-weight:800;margin:0;text-wrap:balance}
+  .band .bsub{color:var(--ink-soft);margin:2px 0 0;font-size:15px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:16px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 22px 20px;display:flex;flex-direction:column}
+  .feat h3{font-size:18px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .feat p{margin:0 0 13px;color:var(--ink-soft);font-size:15px;line-height:1.55}
+  .feat ul{margin:auto 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+  .feat li{position:relative;padding-left:18px;font-size:14.5px;line-height:1.45}
+  .feat li::before{content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  .feat.signal{border-color:#E8D4C0}
+  .feat.signal li::before{background:var(--signal)}
+
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:6px;font-weight:600;color:var(--accent-deep);background:var(--accent-tint)}
+  .tag.s{color:var(--signal);background:var(--signal-tint)}
+
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:16px}
+  .shot .demo-cap{margin-bottom:7px}
+
+  .how{margin-top:64px;background:var(--accent-tint);border-radius:var(--radius);padding:clamp(26px,4vw,40px)}
+  .how h2{font-size:clamp(21px,3vw,27px);margin:0 0 8px;font-weight:800}
+  .how .prose{color:#274a40}
+  .howgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px 28px;margin-top:24px}
+  .howgrid h4{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep);margin:0 0 6px}
+  .howgrid p{margin:0;font-size:14.5px;color:#2d4c43;line-height:1.5}
+
+  .close{margin-top:56px;border-top:2px solid var(--ink);padding-top:34px}
+  .close h2{font-size:clamp(22px,3.2vw,30px);font-weight:800;margin:0 0 14px;text-wrap:balance}
+  .value{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-top:26px}
+  .value div{padding-left:16px;border-left:2px solid var(--accent)}
+  .value b{display:block;font-size:16px;margin-bottom:3px}
+  .value span{font-size:14.5px;color:var(--ink-soft);line-height:1.5}
+  .foot{margin-top:48px;color:var(--ink-faint);font-size:13.5px;font-family:var(--mono);letter-spacing:.03em}
+
+  .price{margin-top:62px}
+  .pricecard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(26px,4vw,38px);display:grid;grid-template-columns:1fr auto;gap:24px 40px;align-items:center}
+  @media (max-width:720px){.pricecard{grid-template-columns:1fr}}
+  .amount{font-size:clamp(34px,6vw,50px);font-weight:800;letter-spacing:-.025em;margin:0 0 16px;line-height:1}
+  .amount span{font-size:17px;font-weight:600;color:var(--ink-soft);letter-spacing:0}
+  .plist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  .plist li{position:relative;padding-left:20px;font-size:15.5px;color:var(--ink-soft);line-height:1.45}
+  .plist li::before{content:"";position:absolute;left:0;top:.5em;width:8px;height:8px;border-radius:2px;background:var(--accent)}
+  .cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:17px;padding:17px 32px;border-radius:10px;white-space:nowrap}
+  .pnote{grid-column:1/-1;margin:2px 0 0;font-size:13.5px;color:var(--ink-faint);line-height:1.55}
+
+  @media (max-width:560px){.page{font-size:16px}}
+
+  /* Зачёркнутая цена: это сумма прайса модулей из таблицы ниже, а не выдумка.
+     Якорь, который не бьётся с собственной таблицей, работает против нас. */
+  .wasprice{font-size:20px;color:var(--ink-faint);text-decoration:line-through;text-decoration-thickness:2px;margin:0 0 4px}
+  .whom{font-size:14.5px;color:var(--accent);font-weight:600;margin:8px 0 18px}
+  .mods{grid-column:1/-1;border-collapse:collapse;width:100%;font-size:14.5px;color:var(--ink-soft);margin-top:6px}
+  .mods td{padding:7px 0;border-bottom:1px solid var(--line)}
+  .mods td:last-child{text-align:right;white-space:nowrap;padding-left:16px;font-variant-numeric:tabular-nums}
+  .mods tr:last-child td{border-bottom:none;padding-top:10px;color:var(--ink);font-weight:700}
+
+  /* Блоки, добавленные 24.08 под задачу «чтобы захотелось купить».
+     Окупаемость, находки, что нужно от владельца, вопросы. */
+  .payback{margin-top:26px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:0 var(--radius) var(--radius) 0;padding:20px 22px;max-width:66ch}
+  .payback b{color:var(--ink)}
+  .payback .big{font-size:clamp(19px,2.6vw,23px);font-weight:800;letter-spacing:-.01em;margin:0 0 8px;line-height:1.25}
+  .payback p{margin:0;color:var(--ink-soft);font-size:15.5px;line-height:1.55}
+  .trial{margin:16px 0 0;font-size:14.5px;color:var(--accent-deep);background:var(--accent-tint);display:inline-block;padding:8px 14px;border-radius:8px;font-weight:600}
+
+  .finds{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:20px}
+  .find{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .find .num{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--signal);margin:0 0 7px}
+  .find p{margin:0;font-size:15px;line-height:1.5;color:var(--ink-soft)}
+  .find b{color:var(--ink)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+  @media (max-width:640px){.two{grid-template-columns:1fr}}
+  .two>div{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px}
+  .two h4{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep);margin:0 0 10px}
+  .two ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+  .two li{font-size:15px;line-height:1.45;color:var(--ink-soft)}
+  .two .mins{margin:12px 0 0;font-size:13.5px;color:var(--ink-faint)}
+
+  .faq{margin-top:56px}
+  .faq .q{border-top:1px solid var(--line);padding:16px 0}
+  .faq .q:last-child{border-bottom:1px solid var(--line)}
+  .faq h4{margin:0 0 5px;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+  .faq p{margin:0;color:var(--ink-soft);font-size:15px;line-height:1.55;max-width:70ch}
+</style>
+
+<div class="page">
+  <div class="wrap">
+
+    <header class="masthead">
+      <p class="wordmark">
+        <svg width="18" height="18" viewBox="0 0 26 26" aria-hidden="true">
+          <rect x="2" y="4" width="15" height="4" rx="2" fill="var(--accent)"/>
+          <circle cx="21.5" cy="6" r="3" fill="var(--accent)"/>
+          <rect x="2" y="11" width="11" height="4" rx="2" fill="var(--accent)" opacity=".86"/>
+          <rect x="2" y="18" width="7" height="4" rx="2" fill="var(--accent)" opacity=".68"/>
+        </svg>
+        Бастық
+      </p>
+      <p class="eyebrow">Управляющий для бизнеса с кассой · Telegram + Google Таблицы</p>
+      <div class="hero-grid">
+        <div>
+          <h1>Управляющий, который читает вашу кассу <span class="rose">за вас</span></h1>
+          <p class="lede">Каждое утро одно сообщение: что вчера случилось, где теряются деньги и что сделать сегодня. Не таблица, а выводы.</p>
+          <ul class="chips">
+            <li>Касса / POS</li><li>2ГИС</li><li>Telegram</li>
+          </ul>
+          <p class="trial">Две недели бесплатно и весь набор сразу, а не урезанное демо. Платить вперёд не нужно.</p>
+        </div>
+        <div class="shot">
+          <p class="demo-cap">Каждое утро - сводка за вчера</p>
+          <div class="msg">
+            <div class="top"><span>🏪 Ваш бизнес · ежедневно</span><span class="t">9:00</span></div>
+            <span class="line">🏪 <b data-lp="вчера">Ваш бизнес - 6 марта (Чт)</b></span>
+            <span class="line"><span class="k">Выручка:</span> <b>2 442 028&nbsp;₸</b> <span class="up">+18%</span></span>
+            <span class="line"><span class="k">Заказов:</span> 248 · <span class="k">чек</span> 9 847&nbsp;₸</span>
+            <span class="line"><span class="k">Месяц:</span> 61.8М / план 80М <b>(77%)</b></span>
+            <div class="hr"></div>
+            <span class="line warn" data-lp="пик-коротко">🔥 8 марта через 2 дня - исторический пик</span>
+          </div>
+        </div>
+      </div>
+      <p class="intro"><b>«У меня касса это и так показывает».</b> Показывает - если в неё зайти. А заходите вы не каждый день, и смотрите там выручку, а не остальное. Три вещи касса не покажет никогда: что приходную накладную никто не сверил с прошлой ценой, что менеджеры перестали заносить клиентов в базу, и сколько ваших покупателей больше не вернулись - для кассы каждый заказ новый. Бастық считает это сам и пишет в тот же день.</p>
+      <p class="intro" style="color:var(--ink-faint);font-size:14px">Система работает каждый день в двух реальных бизнесах. Ниже - что именно приходит владельцу. Названия и эмодзи под вашу сферу, механика та же.</p>
+      <div class="payback">
+        <p class="big">Одна находка окупает подписку на три месяца вперёд</p>
+        <p>Реальный случай: поставщик поднял цену на одну позицию на <b>21%</b> и не предупредил.
+        Накладную никто не сверял с прошлой поставкой, потому что руками этого не делает никто.
+        При обычном объёме закупа это примерно <b>90 000&nbsp;₸</b> лишних за месяц - и так до тех пор,
+        пока кто-нибудь не заметит. Бастық заметил в тот же день.</p>
+      </div>
+    </header>
+
+    <!-- BAND 01 -->
+    <section class="band">
+      <div class="bhead"><span class="bnum">01</span><div><h2>Ежедневный контроль</h2><p class="bsub">Утром открыл Telegram - и видишь весь бизнес за вчера. Не зависит от сферы - только от того, что есть касса с заказами.</p></div></div>
+      <div class="grid">
+        <article class="feat">
+          <h3>Ежедневная сводка</h3>
+          <p>Готовый отчёт за прошлый день - приходит сам каждое утро.</p>
+          <ul>
+            <li>Выручка, заказы, средний чек, отмены</li>
+            <li>Сравнение с прошлым днём и той же неделей</li>
+            <li>Рекорд месяца и среднее за 7 дней</li>
+          </ul>
+        </article>
+        <article class="feat">
+          <h3>План и темп <span class="tag">план/факт</span></h3>
+          <p>Видно, идёте ли к цели месяца - или пора ускоряться.</p>
+          <ul>
+            <li>Факт против плана и процент выполнения</li>
+            <li>Сколько нужно в день, чтобы закрыть план</li>
+            <li>План задаётся в один клик прямо в Telegram</li>
+          </ul>
+        </article>
+        <article class="feat signal">
+          <h3>Закупочные цены <span class="tag s">алерт</span></h3>
+          <p>Поставщик поднял цену и не предупредил. Обычно это выясняется в конце месяца по просевшей марже.</p>
+          <ul>
+            <li>Каждая приходная накладная сверяется с прошлой ценой позиции</li>
+            <li>Скачок приходит сообщением наутро, с прикидкой во что обойдётся за месяц</li>
+            <li>Food-cost процентом: закупки к выручке</li>
+          </ul>
+          <p style="margin-top:12px;font-size:13px;color:var(--ink-faint)">Нужно, чтобы касса отдавала приходные накладные. Проверяется на диагностике до подключения.</p>
+        </article>
+        <article class="feat">
+          <h3>Что продаётся <span class="tag">топ позиций</span></h3>
+          <p>Видно, на чём вы на самом деле зарабатываете, а что занимает место зря.</p>
+          <ul>
+            <li>Топ позиций за неделю и за месяц по количеству</li>
+            <li>Позиции, которые не продались ни разу - если касса отдаёт полный список товаров</li>
+            <li>Если касса отдаёт данные по доставке - среднее время, доля вовремя и медленные зоны</li>
+          </ul>
+        </article>
+        <article class="feat signal">
+          <h3>Пики спроса <span class="tag s">заранее</span></h3>
+          <p>Система сама находит даты, которые исторически давали всплеск - у цветочного это 8 марта, у школьной формы - конец августа, у каждой сферы свои.</p>
+          <ul>
+            <li>Предупреждает за 14 / 7 / 3 дня до «горячей» даты</li>
+            <li>По реальной истории выручки конкретного бизнеса, не по шаблону праздников</li>
+            <li>Работает одинаково для любой сферы - ищет свой пик</li>
+          </ul>
+          <p style="margin-top:12px;font-size:13px;color:var(--ink-faint)">Нужна история из кассы минимум за год - если бизнес открылся недавно, пиков ещё не найдёт, но начнёт находить по мере накопления данных.</p>
+        </article>
+      </div>
+      <div class="shots">
+        <div class="shot">
+          <p class="demo-cap">Напоминание о пике</p>
+          <div class="msg">
+            <div class="top"><span>📅 Пик спроса</span><span class="t">за 7 дней</span></div>
+            <span class="line">📅 <b data-lp="пик-длинно">8 марта - через 7 дней</b></span>
+            <span class="line">Год назад этот день дал выручку</span>
+            <span class="line">в <b>4 раза</b> выше обычной.</span>
+            <span class="line"><span class="k">→ проверь закуп и график курьеров</span></span>
+          </div>
+        </div>
+        <div class="shot">
+          <p class="demo-cap">Месячный отчёт</p>
+          <div class="msg">
+            <div class="top"><span>📆 · 1-е число</span><span class="t">месяц</span></div>
+            <span class="line">📆 <b data-lp="месяц">Февраль 2026</b></span>
+            <span class="line"><span class="k">Факт:</span> <b>65.4М</b> / план 80М (82%)</span>
+            <span class="line"><span class="k" data-lp="месяц-пред">vs Январь:</span> 58.1М → 65.4М <span class="up">+12.6%</span></span>
+            <span class="line"><span class="k">Списания:</span> 1.9М (2.9%)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 02 -->
+    <section class="band">
+      <div class="bhead"><span class="bnum">02</span><div><h2>Спросить своими словами</h2><p class="bsub">Отчёт приходит по расписанию. А вопрос возникает тогда, когда возникает - и не всегда тот, что в отчёте.</p></div></div>
+      <div class="grid">
+        <article class="feat">
+          <h3>Вопрос в телеграм, ответ по вашим цифрам</h3>
+          <p>Пишете боту как человеку, без кнопок и без меню. Он считает по вашей кассе и отвечает.</p>
+          <ul>
+            <li>«Сколько заработали на прошлой неделе против позапрошлой»</li>
+            <li>«Что вообще не продавалось в этом месяце»</li>
+            <li>«Какие позиции подорожали у поставщика»</li>
+            <li>«Какая точка просела и насколько»</li>
+          </ul>
+        </article>
+        <article class="feat">
+          <h3>Считает касса, а не нейросеть <span class="tag">важно</span></h3>
+          <p>Все цифры в ответе взяты из вашей кассы. Модель выбирает, что посчитать, и формулирует ответ, но ни одной цифры не придумывает.</p>
+          <ul>
+            <li>Список того, что она умеет считать, закрытый</li>
+            <li>Чего в нём нет - честное «не вижу», а не выдумка</li>
+            <li>Ответ можно перепроверить в таблице, она у вас на чтении</li>
+          </ul>
+        </article>
+      </div>
+      <div class="shots">
+        <div class="shot">
+          <p class="demo-cap">Спросил словами - получил ответ</p>
+          <div class="msg">
+            <div class="top"><span>💬 Вопрос владельца</span><span class="t">14:20</span></div>
+            <span class="line"><span class="k">Вы:</span> что подорожало у поставщика за месяц?</span>
+            <div class="hr"></div>
+            <span class="line">Выросли три позиции из 47.</span>
+            <span class="line">Самый большой скачок <b>+21%</b>, это</span>
+            <span class="line">добавит примерно <b>90 000&nbsp;₸</b> к закупу</span>
+            <span class="line">за месяц при том же объёме.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 03 -->
+    <section class="band">
+      <div class="bhead"><span class="bnum">03</span><div><h2>Репутация</h2><p class="bsub">Отзыв не должен потеряться до конца дня.</p></div></div>
+      <div class="grid">
+        <article class="feat signal">
+          <h3>Отзывы 2ГИС <span class="tag s">сигнал</span></h3>
+          <p>Новый отзыв - сразу в Telegram, негатив выделен отдельно.</p>
+          <ul>
+            <li>Мониторинг новых отзывов каждый час</li>
+            <li>Оценка ≤ 2★ помечается «🚨 требует ответа»</li>
+            <li>Успеть ответить, пока клиент не ушёл</li>
+          </ul>
+          <p style="margin-top:12px;font-size:13px;color:var(--ink-faint)">Подключаем по желанию. 2ГИС отдельных токенов не выдаёт, поэтому нужен логин от кабинета.</p>
+        </article>
+        <article class="feat">
+          <h3>Отзывы с вашей площадки <span class="tag">если есть API</span></h3>
+          <p>Если у вас своя площадка/приложение доставки - тянем отзывы прямо оттуда, тем же способом, что и 2ГИС.</p>
+          <ul>
+            <li>Читаем штатным API площадки, без самодельных обходов</li>
+            <li>Негатив - сразу в Telegram, как и с 2ГИС</li>
+            <li>Проверяется на диагностике: не у каждой площадки есть такой API</li>
+          </ul>
+        </article>
+      </div>
+      <div class="shots">
+        <div class="shot">
+          <p class="demo-cap">Негативный отзыв - мгновенно</p>
+          <div class="msg">
+            <div class="top"><span>🚨 2ГИС</span><span class="t">только что</span></div>
+            <span class="line warn">🚨 <b>НЕГАТИВНЫЙ ОТЗЫВ - требует ответа!</b></span>
+            <span class="line">⭐⭐ Айгуль · <span data-lp="дата-коротко">06.03</span></span>
+            <span class="line q">«Заказала букет на юбилей - привезли с вялыми розами и на час позже обещанного…»</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="band">
+      <div class="bhead"><div><h2>Что система находит на практике</h2><p class="bsub">Чужие отзывы и названия мы не показываем. А находки покажем: вот что система вылавливала в работающих бизнесах.</p></div></div>
+      <div class="finds">
+        <div class="find"><p class="num">Себестоимость</p><p>Отчёт по себестоимости из кассы завышал её <b>примерно вдвое</b>. Увидели, только когда пересчитали по приходным накладным. Маржа всё это время считалась по кривой цифре.</p></div>
+        <div class="find"><p class="num">Скидки и бонусы</p><p>На них уходило по <b>несколько миллионов тенге в месяц</b>. В отчётах это лежало размазанным по заказам и одной строкой нигде не показывалось.</p></div>
+        <div class="find"><p class="num">Оплаты</p><p>Через один способ оплаты <b>большинство заказов зависало</b>: человек думал, что заплатил, а деньги не приходили. Стало видно, только когда посчитали долю зависших по каждому способу отдельно.</p></div>
+        <div class="find"><p class="num">Закуп</p><p>Поставщик поднял цену на позицию на <b>21%</b> и не предупредил. Накладную с прошлой поставкой никто не сверял.</p></div>
+        <div class="find"><p class="num">База клиентов</p><p>Менеджеры перестали заводить карточки, и за два месяца мимо базы прошли <b>тысячи покупателей</b>. Позвать их на акцию уже некого.</p></div>
+        <div class="find"><p class="num">Повторные покупки</p><p>У <b>восьми из десяти</b> покупателей оказался ровно один заказ. Касса этого не показывает: для неё каждый заказ новый.</p></div>
+        <div class="find"><p class="num">Рассылки</p><p>Рассылка с худшей конверсией приносила <b>больше половины денег</b>. По проценту отклика её надо было выключить первой.</p></div>
+        <div class="find"><p class="num">Лояльность</p><p><b>Две трети</b> начислений бонусов уходили в ноль: три настройки молча запрещали начисление, и программа работала вхолостую.</p></div>
+        <div class="find"><p class="num">Тишина по точке</p><p>Точка простояла <b>сутки без единого заказа</b>, и до утреннего отчёта этого никто не заметил.</p></div>
+      </div>
+      <p class="intro" style="font-size:14px;color:var(--ink-faint)">Без названий и точных сумм: это чужие данные. Порядок величин настоящий.</p>
+    </section>
+
+    <section class="band">
+      <div class="bhead"><div><h2>Что нужно от вас</h2><p class="bsub">Ставить ничего не надо, переучивать продавцов не надо, кассу менять не надо.</p></div></div>
+      <div class="two">
+        <div>
+          <h4>Вы, один раз</h4>
+          <ol>
+            <li>Создаёте пустую Google-таблицу и даёте нам доступ к ней</li>
+            <li>Даёте доступ к кассе на чтение</li>
+            <li>Создаёте группу в телеграме и добавляете туда бота</li>
+            <li>Называете план на месяц</li>
+          </ol>
+          <p class="mins">Пятнадцать минут. Больше от вас ничего не требуется.</p>
+        </div>
+        <div>
+          <h4>Мы, дальше всегда</h4>
+          <ol>
+            <li>Проверяем, что касса отдаёт нужные данные, до подключения и бесплатно</li>
+            <li>Настраиваем, сверяем цифры с вашими, ведём</li>
+            <li>Чиним, если что-то отвалилось, и говорим об этом сами</li>
+          </ol>
+          <p class="mins">Отчёты идут по расписанию. Нажимать вручную нечего.</p>
+        </div>
+      </div>
+      <div class="payback" style="border-left-color:var(--accent)">
+        <p class="big">Доступ только на чтение</p>
+        <p>Мы видим продажи, чеки, накладные и отзывы. Мы не можем менять цены, удалять документы
+        и выгружать вашу базу телефонов. Где касса умеет отдельную роль для интеграции, просим именно её;
+        где не умеет, говорим об этом прямо, чтобы вы решали сами. Доступ отзывается в один клик,
+        и в тот же момент мы перестаём видеть что-либо.</p>
+      </div>
+    </section>
+
+    <section class="how">
+      <h2>Как это устроено</h2>
+      <p class="prose">Никаких приложений, которые надо открывать и обновлять. Система живёт на серверах Google, работает сама по расписанию, а вы просто читаете Telegram. Данные берутся напрямую из ваших систем - вручную ничего вносить не нужно.</p>
+      <div class="howgrid">
+        <div><h4>Подключение</h4><p>Касса и Telegram - токеном. 2ГИС - через логин кабинета (храним в защищённых настройках, не в коде).</p></div>
+        <div><h4>Любая касса с API</h4><p>Posiflora, Posterix, МойСклад. Новая касса добавляется настройкой, а не переписыванием продукта.</p></div>
+        <div><h4>Автономность</h4><p>Отчёты и проверки идут по расписанию. Нажимать вручную ничего не нужно.</p></div>
+        <div><h4>Ваши данные</h4><p>Таблица с расчётом создаётся в вашем Google-аккаунте и принадлежит вам, мы её только наполняем. Отчёты идут в вашу Telegram-группу. Токены и пароли храним в защищённых настройках, отозвать доступ можете в любой момент.</p></div>
+      </div>
+    </section>
+
+    <section class="faq">
+      <p class="eyebrow">Что обычно спрашивают</p>
+      <div class="q"><h4>Подойдёт ли моя касса?</h4><p>Нужна касса, которая отдаёт данные по API. Сейчас подключены Posiflora, Posterix и МойСклад, новая добавляется настройкой, а не переписыванием продукта. Проверяем до подключения и бесплатно: если ваша касса не отдаёт нужного, честно скажем сразу, а не после оплаты.</p></div>
+      <div class="q"><h4>А если данные в кассе кривые?</h4><p>Тогда первая находка будет именно про это. Система показывает то, что реально лежит в кассе, и расхождения вылезают в первую же неделю. Обычно это не мешает, а помогает: становится видно, где перестали заполнять.</p></div>
+      <div class="q"><h4>Что вы видите из моих данных?</h4><p>Продажи, чеки, приходные накладные, отзывы. Только чтение. Менять цены, удалять документы или выгружать базу телефонов мы не можем. Таблица лежит в вашем аккаунте, отчёты приходят в вашу группу.</p></div>
+      <div class="q"><h4>Кому принадлежат мои данные?</h4><p>Таблица с расчётом создаётся в вашем Google-аккаунте и принадлежит вам с первого дня. Мы её только наполняем. Вся история и все отчёты всегда у вас, работаем мы вместе или нет. Доступы к кассе вы отзываете сами, в один клик, без нашего участия.</p></div>
+      <div class="q"><h4>Сколько это займёт моего времени?</h4><p>Пятнадцать минут один раз на доступы и группу. Дальше ноль: вы читаете телеграм.</p></div>
+    </section>
+
+    <!-- PRICE -->
+    <section class="price">
+      <p class="eyebrow">Сколько стоит</p>
+      <div class="pricecard">
+        <div>
+          <p class="wasprice">77 000 ₸</p>
+          <p class="amount">30 000 ₸ <span>в месяц</span></p>
+          <p class="whom">первым пяти - каждого веду лично</p>
+          <ul class="plist">
+            <li><b>Первые две недели - весь набор сразу</b>, а не урезанное демо на одном отчёте</li>
+            <li>Подключение и настройка за наш счёт</li>
+            <li>Отказаться можно в любой месяц, без штрафов и договоров на год</li>
+          </ul>
+        </div>
+        <a class="cta" href="https://t.me/bastyq_bot?start=landing_main">Проверить, подойдёт ли ваша касса</a>
+        <p style="margin:8px 0 0;font-size:13px;color:var(--ink-faint);text-align:center">Бот спросит про кассу и покажет живое демо. Ответит и на вопросы словами.</p>
+        <table class="mods">
+          <tr><td>Отчёт приходит сам в 9 утра: вчерашний день, темп к плану, что просело</td><td>30 000</td></tr>
+          <tr><td>Поставщик поднял цену - сообщаем в тот же день, а не в конце месяца</td><td>10 000</td></tr>
+          <tr><td>Реклама: сколько принесла, а не сколько потрачено</td><td>30 000</td></tr>
+          <tr><td>Новый отзыв в 2ГИС - в телеграм в день появления</td><td>7 000</td></tr>
+          <tr><td>Полный набор по прайсу</td><td>77 000</td></tr>
+        </table>
+        <p class="pnote">Первым пяти клиентам полный набор остаётся за 30 000 навсегда: цена не поднимется, новые модули войдут без доплаты. Приведёте знакомого - месяц бесплатно вам обоим, как только он оплатит второй месяц.<br><br>Рассылки клиентам в WhatsApp в набор не входят и подключаются отдельно: 150 000 ₸ за подключение и 50 000 ₸ в месяц, сообщения по тарифу провайдера. За две недели их не поднять - нужен отдельный номер и согласование шаблонов.</p>
+      </div>
+    </section>
+
+    <!-- CLOSE -->
+    <section class="close">
+      <p class="eyebrow">Что это даёт владельцу</p>
+      <h2>Выводы вместо таблиц - на любой кассе, которая отдаёт данные</h2>
+      <div class="value">
+        <div><b>Контроль без ручной работы</b><span>Весь бизнес за вчера - в одном сообщении каждое утро.</span></div>
+        <div><b>Готовы к пикам заранее</b><span>Алерт за 14/7/3 дня до «горячей» даты по вашей же истории.</span></div>
+        <div><b>Репутация под присмотром</b><span>Негативные отзывы - на радаре, не потеряются.</span></div>
+      </div>
+      <p class="foot">Бастық · точный состав модулей подбирается под вашу кассу и сферу.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+// Метка источника проходит насквозь: ?from=threads3 на лендинге превращается в
+// start=landing_main_threads3 в боте. Без этого видно только «пришёл с лендинга»,
+// а какой именно пост его привёл — нет.
+(function () {
+  try {
+    var from = (new URLSearchParams(location.search).get('from') || '')
+                 .toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 16);
+    if (!from) return;
+    document.querySelectorAll('a.cta[href*="bastyq_bot"]').forEach(function (a) {
+      a.href = a.href + '_' + from;
+    });
+  } catch (e) {}
+})();
+
+// Даты в примерах считаются от сегодняшнего дня. Раньше в скриншотах стояло
+// «6 марта» и «Февраль 2026» намертво, и к августу лендинг читался как
+// заброшенный. Живой продукт не может показывать полугодовой давности отчёт.
+(function () {
+  try {
+    var МЕС = ['января','февраля','марта','апреля','мая','июня',
+               'июля','августа','сентября','октября','ноября','декабря'];
+    var МЕС_И = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                 'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    var ДНИ = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+    // Реальные пики спроса, а не список праздников: берём ближайший впереди.
+    var ПИКИ = [[1,14],[2,8],[4,25],[8,1],[11,31]];  // месяц с нуля, число
+
+    var сейчас = new Date();
+    var вчера = new Date(сейчас.getFullYear(), сейчас.getMonth(), сейчас.getDate() - 1);
+    var дд = function (n) { return (n < 10 ? '0' : '') + n; };
+
+    var ближайший = null, черезДней = 0;
+    for (var г = 0; г < 2 && !ближайший; г++) {
+      for (var i = 0; i < ПИКИ.length; i++) {
+        var д = new Date(сейчас.getFullYear() + г, ПИКИ[i][0], ПИКИ[i][1]);
+        var разница = Math.ceil((д - сейчас) / 86400000);
+        if (разница >= 1) { ближайший = д; черезДней = разница; break; }
+      }
+    }
+    var сутки = function (n) {
+      var к = n % 100, е = n % 10;
+      if (к > 10 && к < 20) return 'дней';
+      if (е === 1) return 'день';
+      if (е >= 2 && е <= 4) return 'дня';
+      return 'дней';
+    };
+    var пикТекст = ближайший
+      ? ближайший.getDate() + ' ' + МЕС[ближайший.getMonth()]
+      : '';
+
+    var прошлый = new Date(сейчас.getFullYear(), сейчас.getMonth() - 1, 1);
+    var позапрошлый = new Date(сейчас.getFullYear(), сейчас.getMonth() - 2, 1);
+
+    document.querySelectorAll('[data-lp]').forEach(function (el) {
+      var вид = el.getAttribute('data-lp');
+      if (вид === 'вчера') {
+        var кто = (el.textContent.split(' - ')[0] || 'Ваш бизнес').trim();
+        el.textContent = кто + ' - ' + вчера.getDate() + ' ' + МЕС[вчера.getMonth()] +
+                         ' (' + ДНИ[вчера.getDay()] + ')';
+      } else if (вид === 'пик-коротко' && ближайший) {
+        el.textContent = '🔥 ' + пикТекст + ' через ' + черезДней + ' ' +
+                         сутки(черезДней) + ' - исторический пик';
+      } else if (вид === 'пик-длинно' && ближайший) {
+        el.textContent = пикТекст + ' - через ' + черезДней + ' ' + сутки(черезДней);
+      } else if (вид === 'месяц') {
+        el.textContent = МЕС_И[прошлый.getMonth()] + ' ' + прошлый.getFullYear();
+      } else if (вид === 'месяц-пред') {
+        el.textContent = 'vs ' + МЕС_И[позапрошлый.getMonth()] + ':';
+      } else if (вид === 'дата-коротко') {
+        el.textContent = дд(вчера.getDate()) + '.' + дд(вчера.getMonth() + 1);
+      }
+    });
+  } catch (e) {}
+})();
+</script>
+</html>
