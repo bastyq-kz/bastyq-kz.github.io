@@ -87,6 +87,10 @@
   td:last-child{text-align:right;white-space:nowrap;color:var(--dim);
                 font-variant-numeric:tabular-nums;padding-left:10px}
   tr:last-child td{border-bottom:0}
+  /* В строке из ОДНОЙ ячейки она же и последняя, а значит ловит nowrap
+     сверху и растягивает страницу. Поймано 25.08.2026 замером вылета. */
+  #вопросы td{white-space:normal;text-align:left;color:var(--accent);padding-left:0}
+  #сигналы td:first-child{white-space:normal}
   .pct{font-weight:700}
   .pct.bad{color:var(--down)} .pct.good{color:var(--up)}
 
@@ -162,6 +166,69 @@
     <div class="row"><b>2ГИС · средняя 4,6</b><span>18 отзывов за месяц</span></div>
     <p class="quote"><span class="stars">★★</span> «Заказала букет на юбилей, привезли с вялыми
     розами и на час позже обещанного.» <span style="font-style:normal">— пришло в телеграм через 40 минут после публикации</span></p>
+  </div>
+
+  <h2>По точкам</h2>
+  <div class="card" style="padding:4px 15px"><table id="точки"></table></div>
+
+  <h2>Возвращаются ли клиенты</h2>
+  <div class="card">
+    <div class="row"><b>Из 10 покупателей вернулись 2</b><span>за 3 месяца</span></div>
+    <div class="bar"><i style="width:21%"></i></div>
+    <p class="quote" style="font-style:normal">Касса этого не показывает: для неё каждый заказ новый.
+    Мы считаем людей, а не чеки, и видим, кто пришёл второй раз.</p>
+  </div>
+
+  <h2>Закупки к выручке</h2>
+  <div class="card">
+    <div class="row"><b>31,4%</b><span>месяц назад 28,9%</span></div>
+    <div class="bar"><i style="width:31%"></i></div>
+    <p class="quote" style="font-style:normal">Доля закупа растёт третий месяц подряд. Основная причина
+    в подорожавшей розе, вторая — списания сверх обычного.</p>
+  </div>
+
+  <h2>Что приходит вне отчёта</h2>
+  <div class="card" style="padding:4px 15px"><table id="сигналы"></table></div>
+
+  <h2>Реклама</h2>
+  <div class="card">
+    <div class="row"><b>Расход 214 000 ₸</b><span>заявок 168</span></div>
+    <div class="row" style="margin-top:6px"><span>Выручка на 1 ₸ рекламы</span><b>7,4 ₸</b></div>
+    <div class="row" style="margin-top:6px"><span>Дни с рекламой против дней без</span><b>+38%</b></div>
+    <p class="quote" style="font-style:normal">Подключается, если у вас есть рекламный кабинет.
+    Считаем не расход, а сколько он принёс.</p>
+  </div>
+
+  <h2>Доставка</h2>
+  <div class="card">
+    <div class="row"><span>Среднее время</span><b>1 ч 12 мин</b></div>
+    <div class="row" style="margin-top:6px"><span>Привезли вовремя</span><b>86%</b></div>
+    <div class="row" style="margin-top:6px"><span>Самая медленная зона</span><b>Северо-запад</b></div>
+    <p class="quote" style="font-style:normal">Показываем, если ваша программа отдаёт данные по доставке.
+    Проверяем на диагностике до подключения.</p>
+  </div>
+
+  <h2>Спросить своими словами</h2>
+  <div class="card">
+    <p class="quote" style="font-style:normal;margin:0 0 9px">Отчёт приходит по расписанию,
+    а вопрос возникает когда возникает. Пишете боту как человеку, без кнопок и меню.</p>
+    <table id="вопросы"></table>
+    <p class="quote" style="font-style:normal;margin-top:9px">Считает ваша касса, а не нейросеть.
+    Модель выбирает, что посчитать, и формулирует ответ, но ни одной цифры не придумывает.</p>
+  </div>
+
+  <h2>Раз в месяц</h2>
+  <div class="card">
+    <p class="quote" style="font-style:normal;margin:0">Первого числа приходит итог: месяц против
+    прошлого, план и факт, списания, топ и антитоп позиций, что выросло в закупе и на сколько.
+    Одним сообщением, без открывания таблиц.</p>
+  </div>
+
+  <div class="card" style="background:var(--accent-soft);border-color:transparent">
+    <p class="cap" style="color:var(--accent)">Важное</p>
+    <p class="quote" style="font-style:normal;margin:0">Состав модулей зависит от того, что отдаёт
+    ваша программа учёта. Что-то включится сразу, чего-то у вас может не быть вовсе.
+    Проверяем до подключения и бесплатно, и говорим честно, а не после оплаты.</p>
   </div>
 
   <a class="cta" id="кнопка" href="https://t.me/bastyq_bot?start=app">Хочу так же для своего бизнеса</a>
@@ -344,6 +411,32 @@
     return "<tr><td>" + r[0] + "<br><span style='color:var(--dim);font-size:12.5px'>" +
            r[1] + "</span></td><td class='pct " + кл + "'>" +
            (r[2] > 0 ? "+" : "") + r[2] + "%</td></tr>";
+  }).join("");
+
+
+  document.getElementById("точки").innerHTML = [
+    ["Центральный", 1680000, 55], ["Северный", 892000, 29], ["Витрина в ТРЦ", 468000, 16]
+  ].map(function (r) {
+    return "<tr><td>" + r[0] + "<br><span style='color:var(--dim);font-size:12.5px'>доля " +
+           r[2] + "%</span></td><td>" + деньги(r[1]) + "</td></tr>";
+  }).join("");
+
+  document.getElementById("сигналы").innerHTML = [
+    ["🚨", "Точка молчит с утра", "вторник, 9:40"],
+    ["📦", "Роза подорожала на 20%", "среда, 8:05"],
+    ["⭐", "Отзыв на 2 звезды в 2ГИС", "четверг, 19:20"],
+    ["📅", "1 сентября через 7 дней", "сегодня, 9:00"]
+  ].map(function (r) {
+    return "<tr><td>" + r[0] + " " + r[1] + "</td><td>" + r[2] + "</td></tr>";
+  }).join("");
+
+  document.getElementById("вопросы").innerHTML = [
+    "Сколько заработали на прошлой неделе против позапрошлой?",
+    "Что вообще не продавалось в этом месяце?",
+    "Какие позиции подорожали у поставщика?",
+    "Какая точка просела и насколько?"
+  ].map(function (q) {
+    return "<tr><td style='color:var(--accent)'>«" + q + "»</td></tr>";
   }).join("");
 
   var кнопки = [].slice.call(document.querySelectorAll(".tabs button"));
