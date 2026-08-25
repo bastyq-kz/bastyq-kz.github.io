@@ -129,6 +129,11 @@
     <div class="card"><p class="cap">Чек</p><div class="num" id="чек">—</div></div>
     <div class="card"><p class="cap">В день</p><div class="num" id="вдень">—</div></div>
   </div>
+  <div class="grid">
+    <div class="card"><p class="cap">Отмены</p><div class="num" id="отмены">—</div></div>
+    <div class="card"><p class="cap">Рекорд</p><div class="num" id="рекорд">—</div></div>
+    <div class="card"><p class="cap">Ср. за 7 дней</p><div class="num" id="среднее7">—</div></div>
+  </div>
 
   <div class="card">
     <p class="cap">Последние 14 дней</p>
@@ -155,6 +160,18 @@
   <h2>Что продаётся</h2>
   <div class="card" style="padding:4px 15px"><table id="топ"></table></div>
 
+  <h2>Не продалось ни разу</h2>
+  <div class="card" style="padding:4px 15px"><table id="антитоп"></table></div>
+  <p class="foot" style="margin:-4px 0 0;text-align:left">Позиции, которые лежат и занимают место.
+  Показываем, если программа отдаёт полный список товаров.</p>
+
+  <h2>По дням недели</h2>
+  <div class="card">
+    <div class="chart" id="недели" style="height:64px"></div>
+    <div class="xaxis" id="подписи"></div>
+    <p class="quote" style="font-style:normal" id="деньвывод"></p>
+  </div>
+
   <h2>Клиенты попадают в базу</h2>
   <div class="card" style="padding:4px 15px"><table id="менеджеры"></table></div>
 
@@ -166,6 +183,9 @@
     <div class="row"><b>2ГИС · средняя 4,6</b><span>18 отзывов за месяц</span></div>
     <p class="quote"><span class="stars">★★</span> «Заказала букет на юбилей, привезли с вялыми
     розами и на час позже обещанного.» <span style="font-style:normal">— пришло в телеграм через 40 минут после публикации</span></p>
+    <p class="quote" style="font-style:normal;margin-top:9px">Если у вас своя площадка или приложение
+    доставки, тянем отзывы и оттуда, тем же способом. Проверяем на диагностике: такой доступ есть
+    не у каждой площадки.</p>
   </div>
 
   <h2>По точкам</h2>
@@ -177,6 +197,14 @@
     <div class="bar"><i style="width:21%"></i></div>
     <p class="quote" style="font-style:normal">Касса этого не показывает: для неё каждый заказ новый.
     Мы считаем людей, а не чеки, и видим, кто пришёл второй раз.</p>
+  </div>
+
+  <h2>Списания</h2>
+  <div class="card">
+    <div class="row"><b>412 000 ₸ за месяц</b><span>3,1% от выручки</span></div>
+    <div class="bar"><i style="width:31%"></i></div>
+    <p class="quote" style="font-style:normal">Больше всего списали розы: она же и подорожала.
+    Месяц назад было 2,4%.</p>
   </div>
 
   <h2>Закупки к выручке</h2>
@@ -333,6 +361,19 @@
     document.getElementById("заказов").textContent = сейчас.заказов;
     document.getElementById("чек").textContent = деньги(сейчас.выручка / сейчас.заказов);
     document.getElementById("вдень").textContent = деньги(сейчас.выручка / п.дней);
+    // Отмены: доля от заказов, ровная и небольшая. Показываем штуками и процентом,
+    // потому что «2%» без числа владельцу ни о чём не говорит.
+    var отм = Math.max(1, Math.round(сейчас.заказов * 0.043));
+    document.getElementById("отмены").textContent = отм + " · " +
+      Math.round(отм / сейчас.заказов * 100) + "%";
+    var рек = 0, дата = null;
+    for (var i = 0; i < 30; i++) {
+      var dd = new Date(вчера); dd.setDate(dd.getDate() - i);
+      var vv = день(dd).выручка;
+      if (vv > рек) { рек = vv; дата = dd; }
+    }
+    document.getElementById("рекорд").textContent = деньги(рек);
+    document.getElementById("среднее7").textContent = деньги(сумма(вчера, 7).выручка / 7);
 
     document.getElementById("находки").innerHTML = НАХОДКИ
       .filter(function (f) { return f.когда.indexOf(ключ) > -1; })
@@ -438,6 +479,39 @@
   ].map(function (q) {
     return "<tr><td style='color:var(--accent)'>«" + q + "»</td></tr>";
   }).join("");
+
+
+  document.getElementById("антитоп").innerHTML = [
+    ["Ваза стеклянная «Тюльпан»", "на витрине 62 дня"],
+    ["Открытка «С юбилеем»", "на витрине 48 дней"],
+    ["Букет «Мимоза», малый", "сезон закончился в марте"]
+  ].map(function (r) {
+    return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>";
+  }).join("");
+
+  // По дням недели: сравниваем средние за последние 4 недели.
+  (function () {
+    var имена = ["пн","вт","ср","чт","пт","сб","вс"], сум = [0,0,0,0,0,0,0], кол = [0,0,0,0,0,0,0];
+    for (var i = 0; i < 28; i++) {
+      var dd = new Date(вчера); dd.setDate(dd.getDate() - i);
+      var к = (dd.getDay() + 6) % 7;
+      сум[к] += день(dd).выручка; кол[к]++;
+    }
+    var ср = сум.map(function (v, i) { return кол[i] ? v / кол[i] : 0; });
+    var макс = Math.max.apply(null, ср), мин = Math.min.apply(null, ср);
+    document.getElementById("недели").innerHTML = ср.map(function (v) {
+      return '<div class="' + (v === макс ? "max" : "") + '" style="height:' +
+             Math.round(v / макс * 100) + '%"></div>';
+    }).join("");
+    document.getElementById("подписи").innerHTML = имена.map(function (n) {
+      return "<span style='flex:1;text-align:center'>" + n + "</span>";
+    }).join("");
+    var лучший = имена[ср.indexOf(макс)], худший = имена[ср.indexOf(мин)];
+    document.getElementById("деньвывод").textContent =
+      "Лучший день недели «" + лучший + "», худший «" + худший + "». Разница " +
+      Math.round((макс - мин) / мин * 100) + "%. Это видно только на длинном отрезке, " +
+      "в дневном отчёте такое не заметно.";
+  })();
 
   var кнопки = [].slice.call(document.querySelectorAll(".tabs button"));
   кнопки.forEach(function (b) {
