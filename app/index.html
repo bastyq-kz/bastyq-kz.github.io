@@ -286,8 +286,14 @@
   function день(d) {
     var base = ПО_ДНЯМ[(d.getDay() + 6) % 7];
     var прошло = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - НАЧАЛО) / 86400000);
-    base = Math.round(base * (1 + 0.0009 * прошло));
-    if (d.getDate() >= 12 && d.getDate() <= 19) base = Math.round(base * 0.78);
+    // Годовая волна. Без неё два соседних тридцатидневных окна почти совпадают
+    // (рост за 30 дней съедается провалом середины месяца), и вкладка «Месяц»
+    // показывает «+0%» — читается как сломанная метрика. Поймано 26.08.2026.
+    var сезон = 1 + 0.16 * Math.sin(2 * Math.PI * ((прошло % 365) - 29) / 365);
+    // floor, а не round: в demo.py стоит int(), и это усечение. С round числа
+    // расходились на десятки тенге за месяц — витрина и бот называли бы разные суммы.
+    base = Math.floor(base * (1 + 0.0015 * прошло) * сезон);
+    if (d.getDate() >= 12 && d.getDate() <= 19) base = Math.floor(base * 0.78);
     return { выручка: base, заказов: Math.max(1, Math.round(base / 14800)) };
   }
   function сумма(откуда, сколько) {
@@ -351,13 +357,17 @@
     var сейчас = сумма(вчера, п.дней);
     var было = new Date(вчера); было.setDate(было.getDate() - п.дней);
     var раньше = сумма(было, п.дней);
-    var изм = раньше.выручка ? Math.round((сейчас.выручка - раньше.выручка) / раньше.выручка * 100) : 0;
+    var точно = раньше.выручка ? (сейчас.выручка - раньше.выручка) / раньше.выручка * 100 : 0;
+    // Мелкую разницу показываем с десятой долей: округление до целого превращало
+    // −0,2% в «+0%», то есть врало и знаком, и содержанием.
+    var изм = Math.abs(точно) < 10 ? Math.round(точно * 10) / 10 : Math.round(точно);
 
     document.getElementById("подпись").textContent = п.подпись;
     document.getElementById("выручка").textContent = деньги(сейчас.выручка);
     var d = document.getElementById("дельта");
-    d.className = "delta " + (изм >= 0 ? "up" : "down");
-    d.innerHTML = (изм >= 0 ? "+" : "") + изм + "% <span>" + п.назад + "</span>";
+    d.className = "delta " + (изм > 0 ? "up" : изм < 0 ? "down" : "");
+    d.innerHTML = (изм > 0 ? "+" : изм < 0 ? "−" : "") +
+      Math.abs(изм).toString().replace(".", ",") + "% <span>" + п.назад + "</span>";
     document.getElementById("заказов").textContent = сейчас.заказов;
     document.getElementById("чек").textContent = деньги(сейчас.выручка / сейчас.заказов);
     document.getElementById("вдень").textContent = деньги(сейчас.выручка / п.дней);
