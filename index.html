@@ -115,7 +115,10 @@
   .mods{grid-column:1/-1;border-collapse:collapse;width:100%;font-size:14.5px;color:var(--ink-soft);margin-top:6px}
   .mods td{padding:7px 0;border-bottom:1px solid var(--line)}
   .mods td:last-child{text-align:right;white-space:nowrap;padding-left:16px;font-variant-numeric:tabular-nums}
-  .mods tr:last-child td{border-bottom:none;padding-top:10px;color:var(--ink);font-weight:700}
+  /* Итоговой строки в таблице больше нет (03.09: единая цена, все пункты
+     равнозначны) — выделение последней строки убрано, иначе рассылки читаются
+     как итог. */
+  .mods tr:last-child td{border-bottom:none}
 
   /* Блоки, добавленные 24.08 под задачу «чтобы захотелось купить».
      Окупаемость, находки, что нужно от владельца, вопросы. */
